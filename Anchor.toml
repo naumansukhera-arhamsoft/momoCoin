@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-minter = "HvstA1bisTEv9iw8jnmFd3YKAqkMQ8RQd5BoR7z2gBMf"
+minter = "E1pmoRuQTz3KcUdzcPw3ovV83v2Xk5EaSuBYqHwFDmAy"
 oracle = "9pCtMqRGA94nX4eaPHPayTBnGqCU9mSzx6v9bN3SX5gH"
 
 [registry]

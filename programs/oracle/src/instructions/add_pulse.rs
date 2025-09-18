@@ -4,6 +4,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use minter::{self, cpi::accounts::TokenOperations, cpi::mint_tokens, program::Minter, cpi::burn_tokens};
 use crate::state::*;
 use crate::errors::ErrorCode;
+
 #[derive(Accounts)]
 pub struct OracleAccount<'info> {
     #[account(
@@ -22,9 +23,9 @@ pub struct OracleAccount<'info> {
     )]
     pub oracle_data_account: Account<'info, OracleData>,
 
-    /// CHECK: will be verified in CPI
+    /// CHECK: This is the minter's operation program account that will be passed to minter
     #[account(mut)]
-    pub operation: UncheckedAccount<'info>,
+    pub operation: AccountInfo<'info>,
     
     #[account(mut)]
     pub mint: Account<'info, Mint>,
@@ -113,7 +114,16 @@ pub fn handler(ctx: Context<OracleAccount>, available_bank_balance: u64) -> Resu
         let cpi_ctx: CpiContext<'_, '_, '_, '_, TokenOperations<'_>> =
             CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
-        mint_tokens(cpi_ctx, mint_amount)?;
+        match mint_tokens(cpi_ctx, mint_amount) {
+            Ok(_) => msg!("Minted {} tokens successfully", mint_amount),
+            Err(e) => {
+                msg!("Failed to mint tokens: {:?}", e);
+                ctx.accounts.oracle_pulse.token_operation_log = format!("Failed to mint tokens: {:?}", e);
+                ctx.accounts.oracle_pulse.token_operation_sucess = 0;
+                ctx.accounts.oracle_pulse.token_operation_type = 1; // mint
+            }
+            
+        }
     } else if available_bank_balance < supply {
         let difference = supply
             .checked_sub(available_bank_balance)

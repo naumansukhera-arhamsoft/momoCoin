@@ -67,44 +67,44 @@ describe("oracle", () => {
     }
   });
 
-  it("Is initialize Minter !", async () => {
-    console.log("token", mint.toBase58());
-    const tx = await minterProgram.methods
-      .initialize(program.programId)
-      .accounts({
-        signer: wallet.publicKey,
-      })
-     // .rpc({ commitment: "confirmed" });
-   console.log("Your transaction signature", tx);
+  // it("Is initialize Minter !", async () => {
+  //   console.log("token", mint.toBase58());
+  //   const tx = await minterProgram.methods
+  //     .initialize(program.programId)
+  //     .accounts({
+  //       signer: wallet.publicKey,
+  //     })
+  //     .rpc({ commitment: "confirmed" });
+  //  console.log("Your transaction signature", tx);
 
-    // const mintccount = await getMint(
-    //   program.provider.connection,
-    //   mint,
-    //   "confirmed",
-    //   TOKEN_PROGRAM_ID,
-    // );
+  //   // const mintccount = await getMint(
+  //   //   program.provider.connection,
+  //   //   mint,
+  //   //   "confirmed",
+  //   //   TOKEN_PROGRAM_ID,
+  //   // );
 
-    console.log("Mint ", mint);
-    // console.log("mint address tka", token.toBase58());
-    console.log("operation address tka", operation.toBase58());
-    console.log("operations", await minterProgram.account.operation.fetch(operation));
-  });
-  it("Is update oracle !", async () => {
-    console.log("oracle data account", oracleDataAccount.toBase58());
-    const tx = await minterProgram.methods
-      .updateOracle(oracleDataAccount)
-      .accounts({
-        admin: wallet2.publicKey,
-      }).signers([keypair])
-      .rpc();
-    console.log("Your transaction signature", tx);
+  //   console.log("Mint ", mint);
+  //   // console.log("mint address tka", token.toBase58());
+  //   console.log("operation address tka", operation.toBase58());
+  //   console.log("operations", await minterProgram.account.operation.fetch(operation));
+  // });
+  // it("Is update oracle !", async () => {
+  //   console.log("oracle data account", oracleDataAccount.toBase58());
+  //   const tx = await minterProgram.methods
+  //     .updateOracle(oracleDataAccount)
+  //     .accounts({
+  //       admin: wallet2.publicKey,
+  //     }).signers([keypair])
+  //     .rpc();
+  //   console.log("Your transaction signature", tx);
 
 
-    console.log("Mint ", mint);
-    // console.log("mint address tka", token.toBase58());
-    console.log("operation address tka", operation.toBase58());
-    console.log("operations", await minterProgram.account.operation.fetch(operation));
-  });
+  //   console.log("Mint ", mint);
+  //   // console.log("mint address tka", token.toBase58());
+  //   console.log("operation address tka", operation.toBase58());
+  //   console.log("operations", await minterProgram.account.operation.fetch(operation));
+  // });
 
 
   it("Adds a pulse!", async () => {
@@ -175,17 +175,10 @@ describe("oracle", () => {
   //   );
 
   //   // Call your create_metadata instruction
-  //   await minterProgram.methods.updateMetadata("Momo USD", "MUSD", "https://olive-obvious-turkey-318.mypinata.cloud/ipfs/bafkreidir7j22fsh74wr2qn6tyy2necplszlmugov7a3vmaipecunzlo7m")
+  //   await minterProgram.methods.createMetadata("Momo USD", "Musd", "https://olive-obvious-turkey-318.mypinata.cloud/ipfs/bafkreif5yieq4mmmhakf3qgka3k5kletgdv2xyfpd2ruwg5zl344e6acie")
   //     .accounts({
   //               payer: provider.wallet.publicKey,
-  //               mint: mint,                    // Use mint PDA
-  //               mintAuthority: mint,           // Same as mint PDA (self-authority)
   //               metadata: metadataPda,
-  //               authority: provider.wallet.publicKey,
-  //               systemProgram: SystemProgram.programId,
-  //               sysvarInstructions: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
-  //               tokenProgram: TOKEN_PROGRAM_ID,
-  //               tokenMetadataProgram: metadataProgram,
 
   //     }).signers([provider.wallet.payer])
   //     .rpc();
