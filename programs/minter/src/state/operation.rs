@@ -11,6 +11,6 @@ impl Operation {
     pub const LEN: usize = 8 + // discriminator
         32 + // admin
         32 + // oracle
-        1+// status
+        10+// status
         8; //extra space;   
 }

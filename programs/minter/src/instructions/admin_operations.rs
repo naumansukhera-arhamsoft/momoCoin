@@ -16,7 +16,7 @@ pub fn update_admin(ctx: Context<UpdateOperation>, admin: Pubkey) -> Result<()> 
 }
 pub fn update_status(ctx: Context<UpdateOperation>, status:u8) -> Result<()> {
     let ctx = &mut ctx.accounts.operation;
-    if status != 1 || status != 0 {
+    if status != 1 && status != 0 {
         return Err(ErrorCode::InvalidStatus.into());
     }
     msg!("Status updated to: {}", status);

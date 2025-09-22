@@ -7,7 +7,7 @@ pub mod errors;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("9pCtMqRGA94nX4eaPHPayTBnGqCU9mSzx6v9bN3SX5gH");
+declare_id!("7WS182qgZYwY2wiqZkX5LBvw43fsfkHtp9kKCXtF5kXp");
 
 #[program]
 pub mod oracle {

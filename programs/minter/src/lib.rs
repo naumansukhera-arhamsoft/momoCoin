@@ -8,7 +8,7 @@ pub use instructions::*;
 pub use state::*;
 pub use errors::*;
 
-declare_id!("E1pmoRuQTz3KcUdzcPw3ovV83v2Xk5EaSuBYqHwFDmAy");
+declare_id!("2vPErEWHjdGAv5JBYYN72X1UR51sAFJ3LHVHnqaEinJH");
 
 #[program]
 pub mod minter {
@@ -24,6 +24,9 @@ pub mod minter {
 
     pub fn update_admin(ctx: Context<UpdateOperation>, admin: Pubkey) -> Result<()> {
         instructions::update_admin(ctx, admin)
+    }
+     pub fn update_status(ctx: Context<UpdateOperation>, status: u8) -> Result<()> {
+        instructions::update_status(ctx, status)
     }
 
     pub fn mint_tokens(ctx: Context<TokenOperations>, amount: u64) -> Result<()> {

@@ -11,6 +11,7 @@ import {
   getAccount,
   getOrCreateAssociatedTokenAccount,
 } from "@solana/spl-token";
+import { BN } from "bn.js";
 describe("oracle", () => {
   // Set up provider & program
   const provider = anchor.AnchorProvider.env();
@@ -55,7 +56,7 @@ describe("oracle", () => {
           user: wallet.publicKey,
 
         })
-       // .rpc();
+    //   .rpc();
 
       //  console.log("OracleData initialized:", oracleDataAccount.toBase58());
     } catch (err: any) {
@@ -67,15 +68,15 @@ describe("oracle", () => {
     }
   });
 
-  // it("Is initialize Minter !", async () => {
-  //   console.log("token", mint.toBase58());
-  //   const tx = await minterProgram.methods
-  //     .initialize(program.programId)
-  //     .accounts({
-  //       signer: wallet.publicKey,
-  //     })
-  //     .rpc({ commitment: "confirmed" });
-  //  console.log("Your transaction signature", tx);
+  it("Is initialize Minter !", async () => {
+    console.log("token", mint.toBase58());
+    const tx = await minterProgram.methods
+      .initialize(program.programId)
+      .accounts({
+        signer: wallet.publicKey,
+      })
+      //.rpc({ commitment: "confirmed" });
+   console.log("Your transaction signature", tx);
 
   //   // const mintccount = await getMint(
   //   //   program.provider.connection,
@@ -88,7 +89,30 @@ describe("oracle", () => {
   //   // console.log("mint address tka", token.toBase58());
   //   console.log("operation address tka", operation.toBase58());
   //   console.log("operations", await minterProgram.account.operation.fetch(operation));
-  // });
+  });
+
+
+  it("Is update Minter status !", async () => {
+    const tx = await minterProgram.methods
+      .updateStatus(1)
+      .accounts({
+        admin: wallet.publicKey,
+      })
+      .rpc({ commitment: "confirmed" });
+   console.log("Your transaction signature", tx);
+
+  //   // const mintccount = await getMint(
+  //   //   program.provider.connection,
+  //   //   mint,
+  //   //   "confirmed",
+  //   //   TOKEN_PROGRAM_ID,
+  //   // );
+
+  //   console.log("Mint ", mint);
+  //   // console.log("mint address tka", token.toBase58());
+  //   console.log("operation address tka", operation.toBase58());
+  //   console.log("operations", await minterProgram.account.operation.fetch(operation));
+  });
   // it("Is update oracle !", async () => {
   //   console.log("oracle data account", oracleDataAccount.toBase58());
   //   const tx = await minterProgram.methods
@@ -122,15 +146,13 @@ describe("oracle", () => {
 
     // Add pulse
     const tx = await program.methods
-      .addPulse(new anchor.BN(980000000)) // available_balance = 1000
+      .addPulse(new anchor.BN(1000000000)) // available_balance 
       .accounts({
         oraclePulse,
-        operation,
         mint,
-        tokenAccount,
         admin: wallet.publicKey,
       })
-      .rpc();
+     .rpc();
 
     console.log("Pulse tx signature:", tx);
 
@@ -151,7 +173,7 @@ describe("oracle", () => {
   //   it("Transfer Tokens", async () => {
   //     const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(program.provider.connection,program.provider.wallet.payer, mint, program.provider.wallet.publicKey);
 
-  //   const tx = await minterProgram.methods.transferTokens(new anchor.BN(1000000)) // 1 token with 6 decimals
+  //   const tx = await minterProgram.methods.transferTokens(new anchor.BN(980000000)) // 1 token with 6 decimals
   //     .accounts({
   //       recipientTokenAccount: recipientTokenAccount.address,
   //     })

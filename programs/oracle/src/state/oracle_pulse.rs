@@ -7,7 +7,6 @@ pub struct OraclePulse {
     pub pulse: u64,                  // 8 bytes
     pub timestamp: i64,              // 8 bytes
     pub token_operation_log: String, // 200 bytes
-    pub token_operation_sucess: u8,  // 1 bytes
     pub token_operation_type: u8,    // 1 bytes
                                      // Total data: 24 bytes + 8 bytes discriminator = 32 bytes
 }
@@ -17,8 +16,8 @@ impl Space for OraclePulse {
     8 + // available_bank_balance
     8 + // pulse
     8+ // timestamp
+    4+ // string prefix
     200+ // token_operation_log
-    1+ // token_operation_sucess
     1+ // token_operation_type
     8; // extra_space
 }

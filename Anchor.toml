@@ -6,14 +6,14 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-minter = "E1pmoRuQTz3KcUdzcPw3ovV83v2Xk5EaSuBYqHwFDmAy"
-oracle = "9pCtMqRGA94nX4eaPHPayTBnGqCU9mSzx6v9bN3SX5gH"
+minter = "2vPErEWHjdGAv5JBYYN72X1UR51sAFJ3LHVHnqaEinJH"
+oracle = "7WS182qgZYwY2wiqZkX5LBvw43fsfkHtp9kKCXtF5kXp"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "https://devnet.helius-rpc.com/?api-key=b9c69888-36d9-452b-9c52-a4ee1d8fcf23"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

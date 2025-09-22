@@ -17,7 +17,7 @@ pub fn create_metadata(
     
     let mut cpi = CreateV1CpiBuilder::new(&cpi_program);
     
-    let binding = ctx.accounts.mint.to_account_info();
+    let binding: AccountInfo<'_> = ctx.accounts.mint.to_account_info();
     cpi.metadata(&ctx.accounts.metadata)
         .mint(&binding, true)
         .authority(&ctx.accounts.mint_authority)
