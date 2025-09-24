@@ -1,11 +1,11 @@
-use crate::state::*;
+use crate::{constants::constants::ORACLE_DATA_SEED, state::*};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct InitOracleData<'info> {
     #[account(
         init,
-        seeds = [b"oracle_data".as_ref()],
+        seeds = [ORACLE_DATA_SEED.as_ref()],
         bump,
         space = 8 + OracleData::INIT_SPACE,
         payer = user,

@@ -2,13 +2,15 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
-use crate::state::Operation;
+use crate::{constants::constants::{MINT_SEED, OPERATION_SEED, TOKEN_ACCOUNT_SEED}, state::Operation};
 
 pub fn initialize(ctx: Context<CreateMint>, oracle: Pubkey) -> Result<()> {
     msg!("Minter Program Initialized");
     ctx.accounts.operation.admin = ctx.accounts.signer.key();
     ctx.accounts.operation.oracle = oracle;
     ctx.accounts.operation.status = 0; // paused
+    ctx.accounts.operation.last_minted = 0;
+    ctx.accounts.operation.cool_down_period = 7200; // default 60 seconds
     Ok(())
 }
 
@@ -19,7 +21,7 @@ pub struct CreateMint<'info> {
 
     #[account(
         init,
-        seeds = [b"operation"],
+        seeds = [OPERATION_SEED.as_ref()],
         bump,
         payer = signer,
         space = 8 + Operation::LEN,
@@ -33,7 +35,7 @@ pub struct CreateMint<'info> {
         mint::decimals = 6,
         mint::authority = mint,
         mint::freeze_authority = mint,
-        seeds = [b"mint"],
+        seeds = [MINT_SEED.as_ref()],
         bump
     )]
     pub mint: Account<'info, Mint>,
@@ -45,7 +47,7 @@ pub struct CreateMint<'info> {
         token::mint = mint,
         token::authority = token_account,
         token::token_program = token_program,
-        seeds = [b"token"],
+        seeds = [TOKEN_ACCOUNT_SEED.as_ref()],
         bump
     )]
     pub token_account: Account<'info, TokenAccount>,

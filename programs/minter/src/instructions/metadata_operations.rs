@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token};
-use mpl_token_metadata::{types::TokenStandard, instructions::CreateV1CpiBuilder};
+use anchor_spl::token::{ Mint, Token };
+use mpl_token_metadata::{ types::TokenStandard, instructions::CreateV1CpiBuilder };
+
+use crate::constants::constants::MINT_SEED;
 
 const METADATA_PROGRAM_ID: Pubkey = pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
@@ -8,15 +10,15 @@ pub fn create_metadata(
     ctx: Context<CreateMetadata>,
     name: String,
     symbol: String,
-    uri: String,
+    uri: String
 ) -> Result<()> {
     msg!("Creating metadata for token: {}", name);
 
     // Create the metadata using Metaplex CPI
     let cpi_program = ctx.accounts.token_metadata_program.to_account_info();
-    
+
     let mut cpi = CreateV1CpiBuilder::new(&cpi_program);
-    
+
     let binding: AccountInfo<'_> = ctx.accounts.mint.to_account_info();
     cpi.metadata(&ctx.accounts.metadata)
         .mint(&binding, true)
@@ -35,8 +37,8 @@ pub fn create_metadata(
         .token_standard(TokenStandard::Fungible);
 
     // Use signer seeds for the mint authority (PDA)
-    let signer_seeds: &[&[&[u8]]] = &[&[b"mint", &[ctx.bumps.mint]]];
-    
+    let signer_seeds: &[&[&[u8]]] = &[&[MINT_SEED.as_ref(), &[ctx.bumps.mint]]];
+
     cpi.invoke_signed(signer_seeds)?;
 
     msg!("Metadata created successfully");
@@ -51,24 +53,19 @@ pub struct CreateMetadata<'info> {
     /// The mint account (PDA)
     #[account(
         mut,
-        seeds = [b"mint"],
+        seeds = [MINT_SEED.as_ref()],
         bump,
     )]
     pub mint: Account<'info, Mint>,
 
     /// Mint authority (same as mint PDA)
     /// CHECK: This is the mint authority PDA
-    #[account(
-        seeds = [b"mint"],
-        bump,
-    )]
+    #[account(seeds = [MINT_SEED.as_ref()], bump)]
     pub mint_authority: AccountInfo<'info>,
 
     /// Metadata account PDA
     /// CHECK: This PDA is checked by Metaplex
-    #[account(
-        mut
-    )]
+    #[account(mut)]
     pub metadata: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,

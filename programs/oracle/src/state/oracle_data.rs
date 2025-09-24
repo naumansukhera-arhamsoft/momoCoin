@@ -5,8 +5,6 @@ pub struct OracleData {
     pub latest_pulse: u64,           // 8 bytes
     pub admin: Pubkey,               // 32 bytes
     pub last_updated: i64,           // 8 bytes
-
-                                     // Total data: 48 bytes + 8 bytes discriminator = 56 bytes
 }
 
 impl Space for OracleData {

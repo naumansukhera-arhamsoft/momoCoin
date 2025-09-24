@@ -1,0 +1,135 @@
+## Security Audit Report – Solana Programs (oracle, minter)
+
+Assessed by: Senior blockchain security engineer (15+ years)
+Date: 2025-09-24
+Scope: On-chain Rust (Anchor) programs `oracle` and `minter`, CPI interactions, PDAs, instruction constraints, and tests.
+
+### Critical Severity
+
+- Incorrect `Operation` account size (risk: corruption/undefined behavior)
+  Location: `programs/minter/src/state/operation.rs`
+  Issue: `LEN` miscalculates fields, omits `last_minted` and `cool_down_period`, and uses wrong size for `status`.
+  Evidence:
+  - Fields: `admin: Pubkey (32)`, `oracle: Pubkey (32)`, `status: u8 (1)`, `last_minted: i64 (8)`, `cool_down_period: u64 (8)`.
+  - Code declares: `8 + 32 + 32 + 10 + 8` which is incorrect and incomplete.
+  Impact: Writes may exceed allocated space or silently corrupt data.
+  Remediation: Set size to 8 + 32 + 32 + 1 + 8 + 8 (+ padding). Example: 89 bytes; round up (e.g., 96 or 104) for future-proofing. If deployed, plan a migration.
+
+- Unbounded account creation / rent DoS via `oracle_pulse`
+  Location: `programs/oracle/src/instructions/add_pulse.rs`
+  Issue: Each pulse creates a new PDA, paid by admin; no cap/rotation/close path.
+  Impact: Admin-compromise or misuse can exhaust SOL via rent bloat.
+  Remediation: Implement ring buffer (e.g., modulo N pulses), or a single log vector with max length; add close/cleanup path for old pulses.
+
+- Non-canonical seeds for `oracle_pulse`
+  Location: `programs/oracle/src/instructions/add_pulse.rs`
+  Issue: Uses `to_string().as_bytes()` for counter seed.
+  Impact: Non-standard seed, potential ambiguity/length issues.
+  Remediation: Use fixed-width LE bytes: `(latest_pulse + 1).to_le_bytes()`; consider namespacing with an authority pubkey.
+
+### High Severity
+
+- Missing `mint` PDA constraint in `oracle.add_pulse`
+  Location: `programs/oracle/src/instructions/add_pulse.rs`
+  Issue: `mint` lacks `seeds`/`seeds::program` constraints; others are constrained.
+  Impact: Confused-deputy if a wrong mint is supplied.
+  Remediation: Constrain to minter PDA: `seeds = [minter::constants::constants::MINT_SEED], bump, seeds::program = minter_program.key()`.
+
+- Anti-manipulation constants defined but unused
+  Location: `programs/oracle/src/constants.rs`
+  Issue: `MIN_PULSE_INTERVAL`, `MAX_BALANCE_DEVIATION_BPS`, `MAX_PULSE_COUNT` unused.
+  Impact: No rate limiting or deviation bounds; supply can swing abruptly.
+  Remediation: Enforce min pulse interval via `Clock::get()?`, check deviation between `available_bank_balance` and current `supply`, and cap pulse count or switch to ring buffer.
+
+- Unit mismatch between bank balance and mint decimals
+  Locations:
+  - `programs/oracle/src/state/oracle_pulse.rs` (comment says 8 decimals)
+  - `programs/minter/src/instructions/initialize.rs` (mint decimals = 6)
+  Impact: Incorrect mint/burn calculations; invariant violations.
+  Remediation: Pick canonical decimals. Either set mint to 8 or normalize inputs to the mint’s decimals before mint/burn. Update tests accordingly.
+
+- Missing mint match in transfers
+  Location: `programs/minter/src/instructions/token_operations.rs`
+  Issue: `recipient_token_account` not constrained to same `mint`.
+  Impact: Risk of transferring to an ATA with a different mint.
+  Remediation: Add constraint `recipient_token_account.mint == mint.key()`.
+
+### Medium Severity
+
+- Commented-out oracle PDA equality check
+  Location: `minter::mint_tokens`
+  Issue: Seeds already bind oracle PDA, but explicit equality check was disabled.
+  Remediation: Reinstate `require_keys_eq!(oracle_pda.key(), expected_pda, UnauthorizedOracle)`. Keep seeds constraints.
+
+- Cool-down period enforced only on `transfer_tokens`
+  Location: `minter::token_operations.rs`
+  Issue: No cool-down on mint/burn; only transfers.
+  Remediation: Consider applying cool-down or rate-limits to mint/burn; alternatively, document the policy.
+
+- `token_operation_log` fixed size may be exceeded
+  Location: `OraclePulse::INIT_SPACE`
+  Issue: 200 bytes may be insufficient for some formatted messages.
+  Remediation: Truncate messages to fit or increase reserved size.
+
+- Comment vs value mismatch
+  Location: `minter::initialize`
+  Issue: Comment says default 60s but sets 7200s.
+  Remediation: Align comment or value.
+
+### Low Severity / Hardening
+
+- Payer model
+  Issue: `payer = admin` for pulse accounts can drain admin SOL if misused.
+  Remediation: Use a treasury PDA as payer or require an explicit payer signer.
+
+- Return `String` from on-chain handlers
+  Issue: Handlers like `add_pulse` return `String` instead of `()`.
+  Impact: Extra compute/serialization; uncommon pattern.
+  Remediation: Prefer `Result<()>` and emit `msg!` logs or Anchor events.
+
+- Event emission
+  Remediation: Emit structured events (e.g., `PulseAdded`, `Minted`, `Burned`) for indexers.
+
+- Explicit program ID markers
+  Remediation: Optional `#[account(address = token::ID)]`-style constraints for clarity.
+
+- Test-account alignment
+  Observation: Some tests pass accounts not required by contexts (e.g., `oracleProgram` in `getStatsSupply`). Keep tests aligned to instruction accounts for clarity.
+
+### Trust Model Notes
+
+- Admin is the oracle authority
+  Observation: `oracle.add_pulse` requires `admin` to match `OracleData.admin` signer. A compromised admin can manipulate supply (subject to minter status).
+  Recommendations: Multi-sig admin; deviation bounds; time-based limits; off-chain attestations.
+
+- CPI authority model
+  Observation: `minter` binds `oracle_pda` seeds to `operation.oracle` and uses PDA signing for mint/burn; model is sound if constraints are tightened as recommended.
+
+### Quick Fix Checklist (Actionable)
+
+1) Fix `Operation::LEN` sizing and add padding.
+2) Use `to_le_bytes()` for `oracle_pulse` seed, not strings.
+3) Add `mint` PDA seeds constraint in `oracle.add_pulse`.
+4) Add `recipient_token_account.mint == mint.key()` constraint in `transfer_tokens`.
+5) Enforce `MIN_PULSE_INTERVAL` and `MAX_BALANCE_DEVIATION_BPS` in `add_pulse`.
+6) Normalize decimals between bank balance and mint, or change mint decimals.
+7) Reinstate oracle PDA equality check in `minter::mint_tokens`.
+8) Consider switching pulse history to ring buffer or capped vector and add close path.
+9) Prefer `Result<()>` returns and emit structured events.
+
+### Key Code References
+
+- Operation size bug:
+  `programs/minter/src/state/operation.rs`
+- Non-canonical pulse seeds and unbounded init:
+  `programs/oracle/src/instructions/add_pulse.rs`
+- Unused safeguards:
+  `programs/oracle/src/constants.rs`
+- Missing recipient mint constraint:
+  `programs/minter/src/instructions/token_operations.rs`
+- Commented-out auth check:
+  `programs/minter/src/instructions/token_operations.rs`
+- Decimals mismatch:
+  `programs/minter/src/instructions/initialize.rs`, `programs/oracle/src/state/oracle_pulse.rs`
+
+End of report.

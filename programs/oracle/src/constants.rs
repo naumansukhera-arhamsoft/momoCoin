@@ -11,9 +11,6 @@ pub mod constants {
     
     /// Seeds for PDA derivation
     pub const ORACLE_DATA_SEED: &[u8] = b"oracle_data";
-    pub const ORACLE_PULSE_SEED: &[u8] = b"oracle_pulse";
+    pub const ORACLE_PULSE_SEED: &[u8] = b"oracle";
     
-    /// Account space constants
-    pub const ORACLE_DATA_SPACE: usize = 8 + 8 + 32 + 8 + 8; // discriminator + latest_pulse + admin + last_updated + total_pulses
-    pub const ORACLE_PULSE_SPACE: usize = 8 + 8 + 8 + 8 + 32; // discriminator + available_bank_balance + pulse + timestamp + authority
 }

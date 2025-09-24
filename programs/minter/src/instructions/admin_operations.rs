@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::{state::Operation, errors::ErrorCode};
+use crate::{constants::constants::OPERATION_SEED, errors::ErrorCode, state::Operation};
 
 pub fn update_oracle(ctx: Context<UpdateOperation>, oracle: Pubkey) -> Result<()> {
     let ctx = &mut ctx.accounts.operation;
@@ -12,6 +12,12 @@ pub fn update_admin(ctx: Context<UpdateOperation>, admin: Pubkey) -> Result<()> 
     let ctx = &mut ctx.accounts.operation;
     ctx.admin = admin;
     msg!("Admin updated to: {}", admin);
+    Ok(())
+}
+pub fn update_cool_down_period_in_seconds(ctx: Context<UpdateOperation>, time:u64) -> Result<()> {
+    let ctx = &mut ctx.accounts.operation;
+    ctx.cool_down_period = time;
+    msg!("Cool down period updated to: {} seconds", time);
     Ok(())
 }
 pub fn update_status(ctx: Context<UpdateOperation>, status:u8) -> Result<()> {
@@ -31,7 +37,7 @@ pub struct UpdateOperation<'info> {
 
     #[account(
         mut,
-        seeds = [b"operation"],
+        seeds = [OPERATION_SEED.as_ref()],
         constraint = operation.admin == admin.key() @ ErrorCode::UnauthorizedAdminUser,
         bump,
     )]

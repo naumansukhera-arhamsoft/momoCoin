@@ -1,11 +1,16 @@
-use crate::errors::ErrorCode;
+use crate::constants::constants::{
+    ORACLE_DATA_SEED,
+    MAX_BALANCE_DEVIATION_BPS,
+    MIN_PULSE_INTERVAL,
+};
+use crate::{ constants::constants::ORACLE_PULSE_SEED, errors::ErrorCode };
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::account_info::AccountInfo;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{ Mint, Token, TokenAccount };
 use minter::{
     self,
-    cpi::{accounts::TokenOperations, burn_tokens, mint_tokens},
+    cpi::{ accounts::TokenOperations, burn_tokens, mint_tokens },
     program::Minter,
     Operation,
 };
@@ -14,33 +19,41 @@ use minter::{
 pub struct OracleAccount<'info> {
     #[account(
         init,
-        seeds = [b"oracle".as_ref(), &(oracle_data_account.latest_pulse + 1).to_string().as_bytes()],
+        seeds = [
+            ORACLE_PULSE_SEED.as_ref(),
+            &(oracle_data_account.latest_pulse + 1).to_string().as_bytes(),
+        ],
         bump,
         space = 8 + OraclePulse::INIT_SPACE,
-        payer = admin,
+        payer = admin
     )]
     pub oracle_pulse: Account<'info, OraclePulse>,
 
     #[account(
         mut,
-        seeds = [b"oracle_data".as_ref()],
+        seeds = [ORACLE_DATA_SEED.as_ref()],
         bump,
     )]
     pub oracle_data_account: Account<'info, OracleData>,
 
     #[account(mut,
-       seeds = [b"operation"],
+       seeds = [minter::constants::constants::OPERATION_SEED.as_ref()],
        bump,
        seeds::program = minter_program.key()
     )]
     pub operation: Account<'info, Operation>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [minter::constants::constants::MINT_SEED.as_ref()],
+        bump,
+        seeds::program = minter_program.key()
+    )]
     pub mint: Account<'info, Mint>,
 
     #[account(
         mut,
-        seeds = [b"token"],                
+        seeds = [minter::constants::constants::TOKEN_ACCOUNT_SEED.as_ref()],                
         bump,                            
         seeds::program = minter_program.key() 
     )]
@@ -57,7 +70,7 @@ pub struct OracleAccount<'info> {
     #[account(address = minter::ID)]
     pub minter_program: Program<'info, Minter>,
 
-    #[account(mut)]
+    #[account(mut,constraint = admin.key() == oracle_data_account.admin @ ErrorCode::UnAuthorizedUser)]
     pub admin: Signer<'info>,
 
     pub system_program: Program<'info, System>,
@@ -70,21 +83,15 @@ pub fn handler(ctx: Context<OracleAccount>, available_bank_balance: u64) -> Resu
     msg!("Operation status is: {}", minter_operation_status);
 
     let bump = ctx.bumps.oracle_data_account;
-    let seeds: &[&[u8]] = &[b"oracle_data", &[bump]];
+    let seeds: &[&[u8]] = &[ORACLE_DATA_SEED, &[bump]];
     let signer_seeds = &[&seeds[..]];
 
     // double check admin
-    require!(
-        oracle_data_account.admin == ctx.accounts.admin.key(),
-        ErrorCode::UnAuthorizedUser
-    );
+    require!(oracle_data_account.admin == ctx.accounts.admin.key(), ErrorCode::UnAuthorizedUser);
 
     let timestamp = Clock::get()?.unix_timestamp;
     // safely increment counter
-    let current_pulse = oracle_data_account
-        .latest_pulse
-        .checked_add(1)
-        .ok_or(ErrorCode::Overflow)?;
+    let current_pulse = oracle_data_account.latest_pulse.checked_add(1).ok_or(ErrorCode::Overflow)?;
 
     oracle_data_account.latest_pulse = current_pulse;
     oracle_data_account.last_updated = timestamp;
@@ -95,14 +102,10 @@ pub fn handler(ctx: Context<OracleAccount>, available_bank_balance: u64) -> Resu
         oracle_pulse.token_operation_log =
             "Operation is paused, no token operations performed".to_string();
         return Ok(
-            "Pulse added successfully, no operation performed due to minter program".to_string(),
+            "Pulse added successfully, no operation performed due to minter program".to_string()
         );
     }
-    msg!(
-        "Pulse recorded at: {}, ProgramID: {:?}",
-        timestamp,
-        ctx.program_id
-    );
+    msg!("Pulse recorded at: {}, ProgramID: {:?}", timestamp, ctx.program_id);
 
     let supply = ctx.accounts.mint.supply;
     let token_account_balance = ctx.accounts.token_account.amount;
@@ -123,55 +126,51 @@ pub fn handler(ctx: Context<OracleAccount>, available_bank_balance: u64) -> Resu
     };
 
     let cpi_program: AccountInfo<'_> = ctx.accounts.minter_program.to_account_info();
-    let cpi_ctx: CpiContext<'_, '_, '_, '_, TokenOperations<'_>> =
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
+    let cpi_ctx: CpiContext<'_, '_, '_, '_, TokenOperations<'_>> = CpiContext::new_with_signer(
+        cpi_program,
+        cpi_accounts,
+        signer_seeds
+    );
 
     if available_bank_balance > supply {
-        let difference = available_bank_balance
-            .checked_sub(supply)
-            .ok_or(ErrorCode::Overflow)?;
+        let difference = available_bank_balance.checked_sub(supply).ok_or(ErrorCode::Overflow)?;
         let mint_amount = difference;
         msg!("Need to mint: {} tokens", mint_amount);
         msg!("Minting new tokens to sync with available balance");
 
         mint_tokens(cpi_ctx, mint_amount)?;
         oracle_pulse.token_operation_type = 1;
-        oracle_pulse.token_operation_log = format!(
-            "Minted {} tokens to sync with available balance",
-            mint_amount
-        );
+        oracle_pulse.token_operation_log =
+            format!("Minted {} tokens to sync with available balance", mint_amount);
     } else if available_bank_balance < supply {
         let token_account_balance = ctx.accounts.token_account.amount;
         msg!("Token account balance is: {}", token_account_balance);
-        let difference = supply
-            .checked_sub(available_bank_balance)
-            .ok_or(ErrorCode::Overflow)?;
+        let difference = supply.checked_sub(available_bank_balance).ok_or(ErrorCode::Overflow)?;
         let mut burn_amount = difference;
         msg!("Need to burn: {} tokens", burn_amount);
         msg!("Burning new tokens to sync with available balance");
         if burn_amount > token_account_balance {
-            msg!("Not enough tokens in token account to burn {} amount",burn_amount);
+            msg!("Not enough tokens in token account to burn {} amount", burn_amount);
             burn_amount = token_account_balance;
-            msg!("Will burn only {} amount",burn_amount);
+            msg!("Will burn only {} amount", burn_amount);
             oracle_pulse.token_operation_log = format!(
-            "Wanted to burn {} tokens but only {} available in token account, burned {} tokens to sync with available balance",
-            difference, token_account_balance, burn_amount);
+                "Wanted to burn {} tokens but only {} available in token account, burned {} tokens to sync with available balance",
+                difference,
+                token_account_balance,
+                burn_amount
+            );
+        } else {
+            oracle_pulse.token_operation_log =
+                format!("Burned {} tokens to sync with available balance", burn_amount);
         }
-      
-        else {
-            oracle_pulse.token_operation_log = format!(
-            "Burned {} tokens to sync with available balance",
-            burn_amount
-        );}
-        if burn_amount ==0 {
+        if burn_amount == 0 {
             msg!("No tokens available in token account to burn");
-            oracle_pulse.token_operation_log = "No tokens available in token account to burn".to_string();
+            oracle_pulse.token_operation_log =
+                "No tokens available in token account to burn".to_string();
             return Ok("Pulse added successfully, no tokens burned".to_string());
         }
         burn_tokens(cpi_ctx, burn_amount)?;
         oracle_pulse.token_operation_type = 2;
-
-        
     } else {
         msg!("No operation needed, supply matches available balance");
         oracle_pulse.token_operation_log =

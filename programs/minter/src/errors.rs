@@ -14,4 +14,6 @@ pub enum ErrorCode {
     OperationPaused,
     #[msg("Operation is freezed")]
     OperationFreezed,
+    #[msg("Cool down period has not elapsed since last minting")]
+    CoolDownPeriodNotElapsed,
 }
